@@ -5,26 +5,13 @@ use std::f32::consts::PI;
 
 use macroquad::prelude::*;
 use particle::{DynamicParticle, StaticParticle};
+use utils::update_camera;
 
 const MUTATE_AMOUNT: f32 = 0.05;
 const DYNAMIC_TARGET: usize = 200;
 const ZOOM_SMOOTHNESS: f32 = 0.99;
 const WORLD_AGGREGATE_RATIO: f32 = 2.0;
 const VIEW_AGGREGATE_RATIO: f32 = 1.2;
-
-fn update_camera(display_radius: f32) -> f32 {
-	let aspect = screen_width() / screen_height();
-	let zoom = 1.0/display_radius;
-	let zoom = if aspect >= 1.0 { vec2(zoom/aspect, zoom) } else { vec2(zoom, zoom*aspect) };
-	let camera = Camera2D {
-		target: vec2(0.0, 0.0),
-		zoom,
-		..Default::default()
-	};
-	set_camera(&camera);
-
-	(camera.screen_to_world(vec2(0.0, 0.0)).x - camera.screen_to_world(vec2(1.0, 0.0)).x).abs()
-}
 
 #[macroquad::main("infinite DLA")]
 async fn main() {
