@@ -2,6 +2,17 @@ use std::f32::consts::PI;
 
 use macroquad::prelude::*;
 
+const MUTATE_AMOUNT: f32 = 0.1;
+
+fn mutate_col(col: &Color, amount: f32) -> Color {
+	Color { 
+		r: (col.r + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		g: (col.g + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		b: (col.b + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		a: col.a 
+	}
+}
+
 struct DynamicParticle {
 	pos: Vec2,
 	vel: Vec2,
@@ -13,25 +24,27 @@ impl DynamicParticle {
 		(self.pos-other.pos).length_squared() <= (self.r + other.r)*(self.r + other.r)
 	}
 
-	fn to_static(&self) -> StaticParticle {
-		StaticParticle { pos: self.pos, r: self.r }
+	// pos - position to normalize the distance to
+	fn to_static(&self, pos: Vec2, r: f32, col: Color) -> StaticParticle {
+		StaticParticle { pos: pos + (self.pos - pos).normalize_or_zero()*(r + self.r), r: self.r, color: mutate_col(&col, MUTATE_AMOUNT)}
 	}
 }
 
 struct StaticParticle {
 	pos: Vec2,
 	r: f32,
+	color: Color,
 }
 
 
 #[macroquad::main("infinite DLA")]
 async fn main() {
-	let dynamic_target = 100;
+	let dynamic_target = 200;
 	let mut dynamic = Vec::<DynamicParticle>::new();
-	let mut aggregate = vec![StaticParticle{pos: vec2(0.0, 0.0), r: 0.02}];
+	let mut aggregate = vec![StaticParticle{pos: vec2(0.0, 0.0), r: 0.02, color: WHITE}];
 
 	let mut world_radius = 1.0;
-	let mut display_radius_target = 0.1;
+	let mut display_radius_target: f32 = 0.1;
 	let mut display_radius = 0.1;
 
     loop {
@@ -63,21 +76,21 @@ async fn main() {
 		}
 
 		dynamic.retain(|p| {
-			let mut collided = false;
+			let mut collided = None;
 			for s in &aggregate {
 				if p.collides(&s) {
-					collided = true;
+					collided = Some((s.pos, s.r, s.color));
 					break;
 				}
 			}
 
-			if collided {
-				aggregate.push(p.to_static());
+			if let Some((pos, r, col)) = collided {
+				aggregate.push(p.to_static(pos, r, col));
 				world_radius = world_radius.max(p.pos.length()*3.0);
 				display_radius_target = display_radius_target.max(p.pos.length()*1.2);
 			}
 
-			return !collided;
+			return collided.is_none();
 		});
 
 		if dynamic.len() < dynamic_target {
@@ -98,10 +111,10 @@ async fn main() {
 		draw_circle_lines(0.0, 0.0, world_radius, 2.0*pixel, WHITE);
 
 		for p in &aggregate {
-			draw_circle(p.pos.x, p.pos.y, p.r, RED);
+			draw_circle(p.pos.x, p.pos.y, p.r, p.color);
 		}
 		for p in &dynamic {
-			draw_circle(p.pos.x, p.pos.y, p.r, GRAY);
+			draw_circle(p.pos.x, p.pos.y, p.r, DARKBROWN);
 		}
 
 		display_radius = display_radius * 0.99 + display_radius_target * 0.01;
