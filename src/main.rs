@@ -23,14 +23,20 @@ async fn main() {
     loop {
 		clear_background(BLACK);
 
-		let pixel = dla.update_camera();
-
 		dla.kinematic_update();
 		dla.collide();
 		dla.spawn();
 		
+		let pixel = dla.update_camera();
 		dla.draw_lines(pixel*1.5);
 
+
+		set_camera(&Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() }));
+		draw_text_ex(format!("{}fps", get_fps()).as_str(), 10.0, 50.0, TextParams { 
+			font_size: 48,
+			font_scale: 1.0,
+			..Default::default()
+		});
 
 		next_frame().await;
 	}
