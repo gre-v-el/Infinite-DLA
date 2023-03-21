@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::{utils::mutate_col, MUTATE_AMOUNT};
+use crate::MUTATE_AMOUNT;
 
 #[derive(Clone, Copy)]
 pub struct DynamicParticle {
@@ -25,4 +25,15 @@ pub struct StaticParticle {
 	pub pos: Vec2,
 	pub r: f32,
 	pub color: Color,
+}
+
+
+
+pub fn mutate_col(col: &Color, amount: f32) -> Color {
+	Color { 
+		r: (col.r + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		g: (col.g + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		b: (col.b + rand::gen_range(-amount, amount)).clamp(0.0, 1.0), 
+		a: col.a 
+	}
 }
