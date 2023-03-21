@@ -14,7 +14,7 @@ impl DynamicParticle {
 	}
 
 	// pos - position to normalize the distance to
-	pub fn to_static(&self, p: StaticParticle) -> StaticParticle {
+	pub fn to_static(&self, p: &StaticParticle) -> StaticParticle {
 		StaticParticle { pos: p.pos + (self.pos - p.pos).normalize_or_zero()*(2.0 * PARTICLE_R), color: mutate_col(&p.color, MUTATE_AMOUNT)}
 	}
 }

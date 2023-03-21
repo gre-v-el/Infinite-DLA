@@ -1,5 +1,6 @@
 mod particle;
 mod dla;
+mod bins;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,6 +14,9 @@ const WORLD_AGGREGATE_RATIO: f32 = 1.4;
 const VIEW_AGGREGATE_RATIO: f32 = 1.2;
 const PARTICLE_R: f32 = 0.01;
 const GROW_DURATION: f32 = 0.5;
+
+const BIN_COUNT: usize = 5;
+const BIN_MARGIN: f32 = 0.1;
 
 #[macroquad::main("infinite DLA")]
 async fn main() {
@@ -28,7 +32,11 @@ async fn main() {
 		dla.spawn();
 		
 		let pixel = dla.update_camera();
-		dla.draw_lines(pixel*1.5);
+		dla.draw_dynamic();
+		dla.draw_aggregate();
+		dla.draw_bins();
+		// dla.draw_lines(pixel*1.5);
+
 
 
 		set_camera(&Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() }));

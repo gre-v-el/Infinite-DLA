@@ -2,11 +2,11 @@ use std::f32::consts::PI;
 
 use macroquad::prelude::*;
 
-use crate::{particle::{DynamicParticle, StaticParticle}, WORLD_AGGREGATE_RATIO, VIEW_AGGREGATE_RATIO, DYNAMIC_TARGET, ZOOM_SMOOTHNESS, PARTICLE_R, GROW_DURATION};
+use crate::{particle::{DynamicParticle, StaticParticle}, WORLD_AGGREGATE_RATIO, VIEW_AGGREGATE_RATIO, DYNAMIC_TARGET, ZOOM_SMOOTHNESS, PARTICLE_R, GROW_DURATION, bins::Bins, BIN_COUNT};
 
 pub struct DLA {
 	dynamic: Vec<DynamicParticle>,
-	aggregate: Vec<StaticParticle>,
+	bins: Bins,
 	lines: Vec<(Vec2, Vec2, Color, f32)>,
 	world_radius: f32,
 	display_radius_target: f32,
@@ -15,9 +15,12 @@ pub struct DLA {
 
 impl DLA {
 	pub fn new() -> Self {
+		let mut bins = Bins::new();
+		bins.insert(StaticParticle { pos: vec2(0.0, 0.0), color: WHITE });
+
 		DLA { 
 			dynamic: Vec::<DynamicParticle>::new(), 
-			aggregate: vec![StaticParticle{pos: vec2(0.0, 0.0), color: WHITE}], 
+			bins,
 			lines: Vec::new(), 
 			world_radius: 1.0, 
 			display_radius_target: 0.1, 
@@ -59,17 +62,17 @@ impl DLA {
 
 	pub fn collide(&mut self) {
 		self.dynamic.retain(|p| {
-			let mut collided = None;
-			for s in &self.aggregate {
-				if p.collides(&s) {
-					collided = Some(*s);
-					break;
-				}
-			}
+			let collided = self.bins.get_colliding(p);
+			// for s in self.bins.iter() {
+			// 	if p.collides(&s) {
+			// 		collided = Some(*s);
+			// 		break;
+			// 	}
+			// }
 
 			if let Some(agg) = collided {
-				let new = p.to_static(agg);
-				self.aggregate.push(new);
+				let new = p.to_static(&agg);
+				self.bins.insert(new);
 				self.lines.push((agg.pos, new.pos, new.color, get_time() as f32));
 				self.world_radius = self.world_radius.max(p.pos.length()*WORLD_AGGREGATE_RATIO);
 				self.display_radius_target = self.display_radius_target.max(p.pos.length()*VIEW_AGGREGATE_RATIO);
@@ -96,8 +99,10 @@ impl DLA {
 	}
 
 	pub fn draw_aggregate(&self) {
-		for p in &self.aggregate {
-			draw_circle(p.pos.x, p.pos.y, PARTICLE_R * 1.2, p.color);
+		for p in self.bins.iter() {
+			let col = self.bins.get_bin(p).unwrap();
+			let col = color_u8!((col%4) * 80, (col%25)*10, (col&2) * 120, 255);
+			draw_circle(p.pos.x, p.pos.y, PARTICLE_R * 1.0, col);
 		}
 	}
 
@@ -112,6 +117,14 @@ impl DLA {
 	pub fn draw_dynamic(&self) {
 		for p in &self.dynamic {
 			draw_circle(p.pos.x, p.pos.y, PARTICLE_R, DARKBROWN);
+		}
+	}
+
+	pub fn draw_bins(&self) {
+		let rect = self.bins.rect();
+		for i in 0..=BIN_COUNT {
+			draw_line(rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.top(), rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.bottom(), 0.001, GRAY);
+			draw_line(rect.left(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, rect.right(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, 0.001, GRAY);
 		}
 	}
 }
