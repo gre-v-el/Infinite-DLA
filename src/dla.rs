@@ -63,6 +63,7 @@ impl DLA {
 	pub fn collide(&mut self) {
 		self.dynamic.retain(|p| {
 			let collided = self.bins.get_colliding(p);
+			// let mut collided = None;
 			// for s in self.bins.iter() {
 			// 	if p.collides(&s) {
 			// 		collided = Some(*s);
@@ -99,10 +100,16 @@ impl DLA {
 	}
 
 	pub fn draw_aggregate(&self) {
-		for p in self.bins.iter() {
-			let col = self.bins.get_bin(p).unwrap();
+		for (particle_index, particle) in self.bins.iter().enumerate() {
+			let mut col = 0;
+			for (bin_index, starting_particle) in self.bins.bins.iter().rev().enumerate() {
+				if particle_index >= *starting_particle {
+					col = bin_index;
+					break;
+				}
+			}
 			let col = color_u8!((col%4) * 80, (col%25)*10, (col&2) * 120, 255);
-			draw_circle(p.pos.x, p.pos.y, PARTICLE_R * 1.0, col);
+			draw_circle(particle.pos.x, particle.pos.y, PARTICLE_R * 1.0, col);
 		}
 	}
 

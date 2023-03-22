@@ -16,7 +16,8 @@ const PARTICLE_R: f32 = 0.01;
 const GROW_DURATION: f32 = 0.5;
 
 const BIN_COUNT: usize = 5;
-const BIN_MARGIN: f32 = 0.1;
+const BIN_MARGIN_MIN: f32 = 0.05;
+const BIN_MARGIN_MAX: f32 = 0.20;
 
 #[macroquad::main("infinite DLA")]
 async fn main() {

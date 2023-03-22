@@ -2,11 +2,11 @@ use std::slice::Iter;
 
 use macroquad::prelude::{Vec2, Rect};
 
-use crate::{particle::{StaticParticle, DynamicParticle}, BIN_COUNT, BIN_MARGIN, PARTICLE_R};
+use crate::{particle::{StaticParticle, DynamicParticle}, BIN_COUNT, BIN_MARGIN_MIN, BIN_MARGIN_MAX, PARTICLE_R};
 
 pub struct Bins {
 	particles: Vec<StaticParticle>, // sorted by bin id
-	bins: Vec<usize>, // id of the first particle in nth bin. The last number stores the particle count 
+	pub bins: Vec<usize>, // id of the first particle in nth bin. The last number stores the particle count 
 	xmin: f32,
 	xmax: f32,
 	ymin: f32,
@@ -49,42 +49,50 @@ impl Bins {
 	}
 
 	pub fn insert(&mut self, p: StaticParticle) {
-		self.xmin = self.xmin.min(p.pos.x - BIN_MARGIN);
-		self.xmax = self.xmax.max(p.pos.x + BIN_MARGIN);
-		self.ymin = self.ymin.min(p.pos.y - BIN_MARGIN);
-		self.ymax = self.ymax.max(p.pos.y + BIN_MARGIN);
+		
+		// if too close to an edge or outside, resize and rebin
+		if p.pos.x < self.xmin + BIN_MARGIN_MIN || p.pos.x > self.xmax - BIN_MARGIN_MIN || p.pos.y < self.ymin + BIN_MARGIN_MIN || p.pos.y > self.ymax - BIN_MARGIN_MIN {
 
-		if self.particles.len() == 0 {
-			self.xmin = p.pos.x - BIN_MARGIN;
-			self.xmax = p.pos.x + BIN_MARGIN;
-			self.ymin = p.pos.y - BIN_MARGIN;
-			self.ymax = p.pos.y + BIN_MARGIN;
-		}
-		if let Some(bin) =  self.get_bin(&p) {
-			self.particles.insert(self.bins[bin], p);
-			for i in (bin+1)..self.bins.len() {
-				self.bins[i] += 1;
-			}
-		}
-		else {
+			self.xmin = self.xmin.min(p.pos.x - BIN_MARGIN_MAX);
+			self.xmax = self.xmax.max(p.pos.x + BIN_MARGIN_MAX);
+			self.ymin = self.ymin.min(p.pos.y - BIN_MARGIN_MAX);
+			self.ymax = self.ymax.max(p.pos.y + BIN_MARGIN_MAX);
+
 			self.particles.push(p);
 
 			self.particles.sort_by(|p1, p2| {
-				Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p2.pos).unwrap()
-				.cmp(&Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p1.pos).unwrap())
+				Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p1.pos).unwrap()
+				.cmp(&Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p2.pos).unwrap())
 			}); // todo: consider cached key, consider implementing the sorting algorithm by hand to modify bins ids on the fly
 
+			self.bins[0] = 0;
 			let mut bin_done = 0;
-			for (i, p) in self.particles.iter().enumerate() {
-				let bin = self.get_bin(p).unwrap();
-				if bin > bin_done {
-					self.bins[bin] = i;
-					bin_done = bin;
+			let mut particle_index = 0;
+			while particle_index < self.particles.len() {
+				let mut do_break = false;
+				while self.get_bin(&self.particles[particle_index]).unwrap() == bin_done {
+					particle_index += 1;
+					if particle_index >= self.particles.len() {
+						do_break = true;
+						break;
+					}
 				}
+				if do_break { break; }
+				bin_done += 1;
+				self.bins[bin_done] = particle_index;
 			}
 
-			for b in bin_done..self.bins.len() {
+			for b in (bin_done+1)..self.bins.len() {
 				self.bins[b] = self.particles.len();
+			}
+		}
+		// if everything's alright, insert
+		else {
+			let bin = self.get_bin(&p).unwrap();
+
+			self.particles.insert(self.bins[bin], p);
+			for i in (bin+1)..self.bins.len() {
+				self.bins[i] += 1;
 			}
 		}
 	}
@@ -110,7 +118,7 @@ impl Bins {
 		// }
 
 		for other in &self.particles[self.bins[bin]..self.bins[bin+1]] {
-			if p.collides(other) && other.pos != p.pos {
+			if p.collides(other) {
 				return Some(*other);
 			}
 		}
