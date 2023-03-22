@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use macroquad::prelude::*;
+use macroquad::{prelude::*, color::hsl_to_rgb};
 
 use crate::{particle::{DynamicParticle, StaticParticle}, WORLD_AGGREGATE_RATIO, VIEW_AGGREGATE_RATIO, DYNAMIC_TARGET, ZOOM_SMOOTHNESS, PARTICLE_R, GROW_DURATION, bins::Bins, BIN_COUNT};
 
@@ -74,6 +74,8 @@ impl DLA {
 			if let Some(agg) = collided {
 				let new = p.to_static(&agg);
 				self.bins.insert(new);
+				// hsl_to_rgb((get_time() as f32 * 0.05)%1.0, 1.0, 0.5)
+				// hsl_to_rgb(new.pos.length()*2.0 % 1.0, 1.0, 0.5)
 				self.lines.push((agg.pos, new.pos, new.color, get_time() as f32));
 				self.world_radius = self.world_radius.max(p.pos.length()*WORLD_AGGREGATE_RATIO);
 				self.display_radius_target = self.display_radius_target.max(p.pos.length()*VIEW_AGGREGATE_RATIO);
@@ -101,15 +103,15 @@ impl DLA {
 
 	pub fn draw_aggregate(&self) {
 		for (particle_index, particle) in self.bins.iter().enumerate() {
-			let mut col = 0;
-			for (bin_index, starting_particle) in self.bins.bins.iter().rev().enumerate() {
-				if particle_index >= *starting_particle {
-					col = bin_index;
-					break;
-				}
-			}
-			let col = color_u8!((col%4) * 80, (col%25)*10, (col&2) * 120, 255);
-			draw_circle(particle.pos.x, particle.pos.y, PARTICLE_R * 1.0, col);
+			// let mut col = 0;
+			// for (bin_index, starting_particle) in self.bins.bins.iter().rev().enumerate() {
+			// 	if particle_index >= *starting_particle {
+			// 		col = bin_index;
+			// 		break;
+			// 	}
+			// }
+			// let col = color_u8!((col%4) * 80, (col%25)*10, (col&2) * 120, 255);
+			draw_circle(particle.pos.x, particle.pos.y, PARTICLE_R * 1.0, particle.color);
 		}
 	}
 

@@ -5,9 +5,9 @@ mod bins;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use dla::DLA;
-use macroquad::prelude::*;
+use macroquad::{prelude::*, color::hsl_to_rgb};
 
-const MUTATE_AMOUNT: f32 = 0.15;
+const MUTATE_AMOUNT: f32 = 0.05;
 const DYNAMIC_TARGET: usize = 200;
 const ZOOM_SMOOTHNESS: f32 = 0.99;
 const WORLD_AGGREGATE_RATIO: f32 = 1.4;
@@ -15,9 +15,9 @@ const VIEW_AGGREGATE_RATIO: f32 = 1.2;
 const PARTICLE_R: f32 = 0.01;
 const GROW_DURATION: f32 = 0.5;
 
-const BIN_COUNT: usize = 5;
+const BIN_COUNT: usize = 15;
 const BIN_MARGIN_MIN: f32 = 0.05;
-const BIN_MARGIN_MAX: f32 = 0.20;
+const BIN_MARGIN_MAX: f32 = 0.50;
 
 #[macroquad::main("infinite DLA")]
 async fn main() {
@@ -33,10 +33,10 @@ async fn main() {
 		dla.spawn();
 		
 		let pixel = dla.update_camera();
-		dla.draw_dynamic();
-		dla.draw_aggregate();
-		dla.draw_bins();
-		// dla.draw_lines(pixel*1.5);
+		// dla.draw_dynamic();
+		// dla.draw_aggregate();
+		// dla.draw_bins();
+		dla.draw_lines(pixel*1.5);
 
 
 

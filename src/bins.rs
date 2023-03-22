@@ -1,12 +1,12 @@
 use std::slice::Iter;
 
-use macroquad::prelude::{Vec2, Rect};
+use macroquad::prelude::{Vec2, Rect, vec2};
 
 use crate::{particle::{StaticParticle, DynamicParticle}, BIN_COUNT, BIN_MARGIN_MIN, BIN_MARGIN_MAX, PARTICLE_R};
 
 pub struct Bins {
 	particles: Vec<StaticParticle>, // sorted by bin id
-	pub bins: Vec<usize>, // id of the first particle in nth bin. The last number stores the particle count 
+	bins: Vec<usize>, // id of the first particle in nth bin. The last number stores the particle count 
 	xmin: f32,
 	xmax: f32,
 	ymin: f32,
@@ -30,11 +30,8 @@ impl Bins {
 	}
 
 	// todo: terrible naming
-	pub fn get_bin(&self, p: &StaticParticle) -> Option<usize> {
-		Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p.pos)
-	}
-	pub fn get_bin_dynamic(&self, p: &DynamicParticle) -> Option<usize> {
-		Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p.pos)
+	pub fn get_bin(&self, pos: Vec2) -> Option<usize> {
+		Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, pos)
 	}
 	pub fn get_bin_static(xmin: f32, xmax: f32, ymin: f32, ymax: f32, pos: Vec2) -> Option<usize> {
 		let x = (pos.x - xmin) / (xmax - xmin) * BIN_COUNT as f32;
@@ -70,7 +67,7 @@ impl Bins {
 			let mut particle_index = 0;
 			while particle_index < self.particles.len() {
 				let mut do_break = false;
-				while self.get_bin(&self.particles[particle_index]).unwrap() == bin_done {
+				while self.get_bin(self.particles[particle_index].pos).unwrap() == bin_done {
 					particle_index += 1;
 					if particle_index >= self.particles.len() {
 						do_break = true;
@@ -88,7 +85,7 @@ impl Bins {
 		}
 		// if everything's alright, insert
 		else {
-			let bin = self.get_bin(&p).unwrap();
+			let bin = self.get_bin(p.pos).unwrap();
 
 			self.particles.insert(self.bins[bin], p);
 			for i in (bin+1)..self.bins.len() {
@@ -98,7 +95,7 @@ impl Bins {
 	}
 
 	pub fn get_colliding(&self, p: &DynamicParticle) -> Option<StaticParticle> {
-		let bin = self.get_bin_dynamic(p)?;
+		let bin = self.get_bin(p.pos)?;
 		// let x = bin%BIN_COUNT;
 		// let y = bin/BIN_COUNT;
 		
@@ -122,6 +119,23 @@ impl Bins {
 				return Some(*other);
 			}
 		}
+		for x in -1..=1 {
+			for y in -1..=1 {
+				if x == 0 && y == 0 { continue; }
+				
+				let edge_bin = self.get_bin(p.pos + vec2(x as f32 * PARTICLE_R, y as f32 * PARTICLE_R));
+				if let Some(edge_bin) = edge_bin {
+					if edge_bin == bin { continue; }
+					
+					for other in &self.particles[self.bins[edge_bin]..self.bins[edge_bin+1]] {
+						if p.collides(other) {
+							return Some(*other);
+						}
+					}
+				}
+			}
+		}
+
 		
 		None
 	}
