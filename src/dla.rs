@@ -46,7 +46,7 @@ impl DLA {
 
 	pub fn kinematic_update(&mut self) {
 		for p in &mut self.dynamic {
-			p.pos += p.vel * 0.01;
+			p.pos += p.vel * PARTICLE_R;
 
 			if p.pos.length_squared() >= self.world_radius*self.world_radius {
 				let pos_norm = p.pos.normalize_or_zero();
@@ -86,7 +86,7 @@ impl DLA {
 	}
 
 	pub fn spawn(&mut self) {
-		if self.dynamic.len() < DYNAMIC_TARGET {
+		while self.dynamic.len() < DYNAMIC_TARGET {
 			let spread = 0.8;
 
 			let pos_angle = rand::gen_range(0.0, 2.0*PI);
@@ -135,5 +135,9 @@ impl DLA {
 			draw_line(rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.top(), rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.bottom(), 0.001, GRAY);
 			draw_line(rect.left(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, rect.right(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, 0.001, GRAY);
 		}
+	}
+
+	pub fn draw_world(&self) {
+		draw_circle_lines(0.0, 0.0, self.world_radius, 0.01, GRAY);
 	}
 }
