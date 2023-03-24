@@ -9,7 +9,7 @@ pub struct DLA {
 	bins: Bins,
 	lines: Vec<(Vec2, Vec2, Color, f32)>,
 	world_radius: f32,
-	display_radius_target: f32,
+	aggregate_radius: f32,
 	display_radius: f32,
 }
 
@@ -23,13 +23,13 @@ impl DLA {
 			bins,
 			lines: Vec::new(), 
 			world_radius: 1.0, 
-			display_radius_target: 0.1, 
+			aggregate_radius: 0.1, 
 			display_radius: 0.08, 
 		}
 	}
 
 	pub fn update_camera(&mut self, globals: &Globals) -> f32 {
-		self.display_radius = self.display_radius * globals.zoom_smoothness + self.display_radius_target * (1.0 - globals.zoom_smoothness);
+		self.display_radius = self.display_radius * globals.zoom_smoothness + self.aggregate_radius*globals.view_aggregate_ratio * (1.0 - globals.zoom_smoothness);
 
 		let aspect = screen_width() / screen_height();
 		let zoom = 1.0/self.display_radius;
@@ -78,7 +78,7 @@ impl DLA {
 				// hsl_to_rgb(new.pos.length()*2.0 % 1.0, 1.0, 0.5)
 				self.lines.push((agg.pos, new.pos, new.color, get_time() as f32));
 				self.world_radius = self.world_radius.max(p.pos.length()*globals.world_aggregate_ratio);
-				self.display_radius_target = self.display_radius_target.max(p.pos.length()*globals.view_aggregate_ratio);
+				self.aggregate_radius = self.aggregate_radius.max(p.pos.length());
 			}
 
 			return collided.is_none();

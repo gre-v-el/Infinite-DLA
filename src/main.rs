@@ -103,13 +103,18 @@ async fn main() {
 					if ui.button("restart").clicked() {
 						dla = DLA::new(&globals);
 					}
-					ui.color_edit_button_hsva(&mut globals.seed_color);
+					ui.horizontal(|ui| {
+						ui.color_edit_button_hsva(&mut globals.seed_color);
+						ui.label("Seed color");
+					}).response.on_hover_text_at_pointer("Needs restart");
 					drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
 					drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
 					drag_val_label(ui, &mut globals.iters_per_frame, 0..=100, 0.25, "Iterations per frame");
+					drag_val_label(ui, &mut globals.dynamic_target, 0..=500, 1.0, "Dynamic particles count");
+					drag_val_label(ui, &mut globals.zoom_smoothness, 0.5..=0.999, 0.001, "Zoom smoothness");
+					drag_val_label(ui, &mut globals.world_aggregate_ratio, 1.1..=3.0, 0.01, "World-aggregate ratio");
+					drag_val_label(ui, &mut globals.view_aggregate_ratio, 0.0..=3.0, 0.01, "Zoom-aggregate ratio");
 					/*
-						dynamic_target: 100,
-						zoom_smoothness: 0.95,
 						world_aggregate_ratio: 1.6,
 						view_aggregate_ratio: 1.1,
 						particle_r: 0.01,
