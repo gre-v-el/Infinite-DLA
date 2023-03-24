@@ -16,7 +16,7 @@ pub struct DLA {
 impl DLA {
 	pub fn new(globals: &Globals) -> Self {
 		let mut bins = Bins::new(globals);
-		bins.insert(StaticParticle { pos: vec2(0.0, 0.0), color: globals.seed_color }, globals);
+		bins.insert(StaticParticle { pos: vec2(0.0, 0.0), color: globals.seed_color.to_rgba_unmultiplied().into() }, globals);
 
 		DLA { 
 			dynamic: Vec::<DynamicParticle>::new(), 

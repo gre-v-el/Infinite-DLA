@@ -19,7 +19,7 @@ fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, spee
 }
 
 pub struct Globals {
-	pub seed_color: Color,
+	pub seed_color: Hsva,
 	pub branch_thickness: f32,
 	pub mutate_amount: f32,
 	pub dynamic_target: usize,
@@ -37,7 +37,7 @@ pub struct Globals {
 impl Default for Globals {
 	fn default() -> Self {
 		Globals {
-			seed_color: WHITE,
+			seed_color: Hsva { h: 0.5, s: 0.0, v: 1.0, a: 1.0 },
 			branch_thickness: 2.0,
 			mutate_amount: 0.07,
 			dynamic_target: 100,
@@ -103,11 +103,7 @@ async fn main() {
 					if ui.button("restart").clicked() {
 						dla = DLA::new(&globals);
 					}
-					let mut color = Hsva::from_rgb([globals.seed_color.r, globals.seed_color.g, globals.seed_color.b]);
-					if ui.color_edit_button_hsva(&mut color).changed() {
-						let color = color.to_rgb();
-						globals.seed_color = Color {r: color[0], g: color[1], b: color[0], a: 1.0};
-					}
+					ui.color_edit_button_hsva(&mut globals.seed_color);
 					drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
 					drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
 					drag_val_label(ui, &mut globals.iters_per_frame, 0..=100, 0.25, "Iterations per frame");
