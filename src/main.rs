@@ -5,7 +5,7 @@ mod bins;
 use std::{time::{SystemTime, UNIX_EPOCH}, ops::RangeInclusive};
 
 use dla::DLA;
-use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText, Layout, Align, Response}, macroquad};
+use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText, Response}, macroquad};
 use macroquad::prelude::*;
 
 fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, speed: f64, label: T) -> Response
@@ -132,10 +132,6 @@ async fn main() {
 								.on_hover_text_at_pointer("When the bins structure is resized, this is the distance between the most far-reaching particle in a given direction and the edge of the bins structure.");
 						});
 					});
-					/*
-						todo: split those into advanced/normal
-						bin_count: 31,
-					*/
 					ui.horizontal(|ui| {
 						if ui.button("defaults").clicked() {
 							globals = Globals::default();
