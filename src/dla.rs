@@ -129,11 +129,11 @@ impl DLA {
 		}
 	}
 
-	pub fn draw_bins(&self) {
+	pub fn draw_bins(&self, pixel: f32) {
 		let rect = self.bins.rect();
 		for i in 0..=BIN_COUNT {
-			draw_line(rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.top(), rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.bottom(), 0.001, GRAY);
-			draw_line(rect.left(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, rect.right(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, 0.001, GRAY);
+			draw_line(rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.top(), rect.left() + rect.w * i as f32 / BIN_COUNT as f32, rect.bottom(), pixel, GRAY);
+			draw_line(rect.left(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, rect.right(), rect.top() + rect.h * i as f32 / BIN_COUNT as f32, pixel, GRAY);
 		}
 	}
 

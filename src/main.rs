@@ -22,12 +22,18 @@ const BIN_MARGIN_MAX: f32 = 0.50;
 
 const ITERS_PER_FRAME: u8 = 30;
 
+
+
 #[macroquad::main("infinite DLA")]
 async fn main() {
 	rand::srand(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
 
 	let mut dla = DLA::new();
-	let mut do_draw = true;
+	let mut draw_particles = false;
+	let mut draw_aggregate = false;
+	let mut draw_lines = true;
+	let mut draw_bins = false;
+	let mut draw_world = false;
 
 	// time of completion - time of frame start
 	// kinematics, collisions, spawning, drawing
@@ -45,34 +51,44 @@ async fn main() {
 		dla.spawn();
 		profiler[0] = get_time() - start;
 		
-		if is_key_pressed(KeyCode::Space) {
-			do_draw = !do_draw;
-		}
-		
 		clear_background(BLACK);
 		
-		if do_draw {
-			let pixel = dla.update_camera();
-			// dla.draw_dynamic();
-			// dla.draw_aggregate();
-			// dla.draw_bins();
-			// dla.draw_world();
-			dla.draw_lines(pixel*1.5);
-		}
-		set_camera(&Camera2D::from_display_rect(Rect { x: 0.0, y: 0.0, w: screen_width(), h: screen_height() }));
-		draw_text_ex(format!("{}fps", get_fps()).as_str(), 10.0, 50.0, TextParams { 
-			font_size: 48,
-			font_scale: 1.0,
-			..Default::default()
-		});
-		
-		let total = prof[1];
-		let kin = (prof[0] / total) as f32;
-		let drw = ((prof[1] - prof[0]) / total) as f32;
-		draw_rectangle(10.0, screen_height()-60.0, 200.0*kin, 50.0, RED);
-		draw_rectangle(10.0+200.0*kin, screen_height()-60.0, 200.0*drw, 50.0, GREEN);
+		let pixel = dla.update_camera();
+		if draw_particles 	{ dla.draw_dynamic(); }
+		if draw_aggregate 	{ dla.draw_aggregate(); }
+		if draw_lines		{ dla.draw_lines(pixel*0.5); }
+		if draw_bins		{ dla.draw_bins(pixel*0.5); }
+		if draw_world		{ dla.draw_world(); }
 
-		draw_text_ex(format!("{:.2}ms", total*1000.0).as_str(), 210.0, screen_height()-30.0, TextParams { font_size: 36, ..Default::default()});
+		egui_macroquad::ui(|ctx| {
+			egui::Window::new("options")
+				.collapsible(false)
+				.fixed_pos((10.0, 10.0))
+				.fixed_size((150.0, 400.0))
+				.title_bar(false)
+				.show(ctx, |ui| {
+					ui.heading("Controls");
+					if ui.button("reset").clicked() {
+						dla = DLA::new();
+					}
+
+					ui.separator();
+					ui.heading("Display");
+					ui.checkbox(&mut draw_particles, "particles");
+					ui.checkbox(&mut draw_aggregate, "aggregate");
+					ui.checkbox(&mut draw_lines, "branches");
+					ui.checkbox(&mut draw_bins, "bins");
+					ui.checkbox(&mut draw_world, "world");
+
+					ui.separator();
+					ui.heading("Info");
+					ui.label(format!("{}fps", get_fps()));
+					ui.label(format!("frame time: {:.2}ms", 1000.0*prof[1]));
+					ui.label(format!("update time: {:.2}ms", 1000.0*prof[0]));
+					ui.label(format!("draw time: {:.2}ms", 1000.0*prof[1] - 1000.0*prof[0]));
+				});
+		});
+		egui_macroquad::draw();
 
 		profiler[1] = get_time() - start;
 
