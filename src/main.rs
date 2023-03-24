@@ -2,11 +2,21 @@ mod particle;
 mod dla;
 mod bins;
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{time::{SystemTime, UNIX_EPOCH}, ops::RangeInclusive};
 
 use dla::DLA;
-use egui_macroquad::{egui::{self, epaint::Hsva}, macroquad};
+use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText}, macroquad};
 use macroquad::prelude::*;
+
+fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, speed: f64, label: T) where 
+	N : egui::emath::Numeric,
+	T : Into<WidgetText>
+	 {
+	ui.horizontal(|ui| {
+		ui.add(egui::DragValue::new(val).clamp_range(range).speed(speed));
+		ui.label(label);
+	});
+}
 
 pub struct Globals {
 	pub seed_color: Color,
@@ -98,9 +108,9 @@ async fn main() {
 						let color = color.to_rgb();
 						globals.seed_color = Color {r: color[0], g: color[1], b: color[0], a: 1.0};
 					}
-					ui.add(egui::DragValue::new(&mut globals.mutate_amount).clamp_range(0.0..=1.0).speed(0.001));
-					ui.add(egui::DragValue::new(&mut globals.branch_thickness).clamp_range(0.0..=10.0).speed(0.01));
-					ui.add(egui::DragValue::new(&mut globals.iters_per_frame).clamp_range(0..=100).speed(0.25));
+					drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
+					drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
+					drag_val_label(ui, &mut globals.iters_per_frame, 0..=100, 0.25, "Iterations per frame");
 					/*
 						dynamic_target: 100,
 						zoom_smoothness: 0.95,
