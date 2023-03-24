@@ -1,5 +1,5 @@
+use egui_macroquad::macroquad;
 use macroquad::prelude::*;
-
 use crate::{MUTATE_AMOUNT, PARTICLE_R};
 
 #[derive(Clone, Copy)]

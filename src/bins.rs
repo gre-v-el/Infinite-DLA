@@ -1,5 +1,5 @@
 use std::slice::Iter;
-
+use egui_macroquad::macroquad;
 use macroquad::prelude::{Vec2, Rect, vec2};
 
 use crate::{particle::{StaticParticle, DynamicParticle}, BIN_COUNT, BIN_MARGIN_MIN, BIN_MARGIN_MAX, PARTICLE_R};

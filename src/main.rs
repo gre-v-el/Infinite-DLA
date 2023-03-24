@@ -5,6 +5,7 @@ mod bins;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use dla::DLA;
+use egui_macroquad::{egui, macroquad};
 use macroquad::prelude::*;
 
 const MUTATE_AMOUNT: f32 = 0.07;

@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
-
-use macroquad::{prelude::*, color::hsl_to_rgb};
+use egui_macroquad::macroquad;
+use macroquad::prelude::*;
 
 use crate::{particle::{DynamicParticle, StaticParticle}, WORLD_AGGREGATE_RATIO, VIEW_AGGREGATE_RATIO, DYNAMIC_TARGET, ZOOM_SMOOTHNESS, PARTICLE_R, GROW_DURATION, bins::Bins, BIN_COUNT};
 
@@ -102,7 +102,7 @@ impl DLA {
 	}
 
 	pub fn draw_aggregate(&self) {
-		for (particle_index, particle) in self.bins.iter().enumerate() {
+		for particle in self.bins.iter() {
 			// let mut col = 0;
 			// for (bin_index, starting_particle) in self.bins.bins.iter().rev().enumerate() {
 			// 	if particle_index >= *starting_particle {
