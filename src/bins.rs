@@ -2,7 +2,7 @@ use std::slice::Iter;
 use egui_macroquad::macroquad;
 use macroquad::prelude::{Vec2, Rect, vec2};
 
-use crate::{particle::{StaticParticle, DynamicParticle}, BIN_COUNT, BIN_MARGIN_MIN, BIN_MARGIN_MAX, PARTICLE_R};
+use crate::{particle::{StaticParticle, DynamicParticle}, Globals};
 
 pub struct Bins {
 	particles: Vec<StaticParticle>, // sorted by bin id
@@ -14,9 +14,9 @@ pub struct Bins {
 }
 
 impl Bins {
-	pub fn new() -> Self {
+	pub fn new(globals: &Globals) -> Self {
 		let mut bins = Vec::new();
-		for _ in 0..(BIN_COUNT*BIN_COUNT + 1) {
+		for _ in 0..(globals.bin_count*globals.bin_count + 1) {
 			bins.push(0);
 		}
 		Self { 
@@ -30,36 +30,37 @@ impl Bins {
 	}
 
 	// todo: terrible naming
-	pub fn get_bin(&self, pos: Vec2) -> Option<usize> {
-		Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, pos)
+	pub fn get_bin(&self, pos: Vec2, globals: &Globals) -> Option<usize> {
+		Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, pos, globals)
 	}
-	pub fn get_bin_static(xmin: f32, xmax: f32, ymin: f32, ymax: f32, pos: Vec2) -> Option<usize> {
-		let x = (pos.x - xmin) / (xmax - xmin) * BIN_COUNT as f32;
-		let y = (pos.y - ymin) / (ymax - ymin) * BIN_COUNT as f32;
 
-		if x > 0.0 && x < BIN_COUNT as f32 && y > 0.0 && y < BIN_COUNT as f32 {
-			Some(x.floor() as usize + y.floor() as usize * BIN_COUNT)
+	pub fn get_bin_static(xmin: f32, xmax: f32, ymin: f32, ymax: f32, pos: Vec2, globals: &Globals) -> Option<usize> {
+		let x = (pos.x - xmin) / (xmax - xmin) * globals.bin_count as f32;
+		let y = (pos.y - ymin) / (ymax - ymin) * globals.bin_count as f32;
+
+		if x > 0.0 && x < globals.bin_count as f32 && y > 0.0 && y < globals.bin_count as f32 {
+			Some(x.floor() as usize + y.floor() as usize * globals.bin_count)
 		}
 		else {
 			None
 		}
 	}
 
-	pub fn insert(&mut self, p: StaticParticle) {
+	pub fn insert(&mut self, p: StaticParticle, globals: &Globals) {
 		
 		// if too close to an edge or outside, resize and rebin
-		if p.pos.x < self.xmin + BIN_MARGIN_MIN || p.pos.x > self.xmax - BIN_MARGIN_MIN || p.pos.y < self.ymin + BIN_MARGIN_MIN || p.pos.y > self.ymax - BIN_MARGIN_MIN {
+		if p.pos.x < self.xmin + globals.bin_margin_min || p.pos.x > self.xmax - globals.bin_margin_min || p.pos.y < self.ymin + globals.bin_margin_min || p.pos.y > self.ymax - globals.bin_margin_min {
 
-			self.xmin = self.xmin.min(p.pos.x - BIN_MARGIN_MAX);
-			self.xmax = self.xmax.max(p.pos.x + BIN_MARGIN_MAX);
-			self.ymin = self.ymin.min(p.pos.y - BIN_MARGIN_MAX);
-			self.ymax = self.ymax.max(p.pos.y + BIN_MARGIN_MAX);
+			self.xmin = self.xmin.min(p.pos.x - globals.bin_margin_max);
+			self.xmax = self.xmax.max(p.pos.x + globals.bin_margin_max);
+			self.ymin = self.ymin.min(p.pos.y - globals.bin_margin_max);
+			self.ymax = self.ymax.max(p.pos.y + globals.bin_margin_max);
 
 			self.particles.push(p);
 
 			self.particles.sort_by(|p1, p2| {
-				Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p1.pos).unwrap()
-				.cmp(&Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p2.pos).unwrap())
+				Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p1.pos, globals).unwrap()
+				.cmp(&Self::get_bin_static(self.xmin, self.xmax, self.ymin, self.ymax, p2.pos, globals).unwrap())
 			}); // todo: consider cached key, consider implementing the sorting algorithm by hand to modify bins ids on the fly
 
 			self.bins[0] = 0;
@@ -67,7 +68,7 @@ impl Bins {
 			let mut particle_index = 0;
 			while particle_index < self.particles.len() {
 				let mut do_break = false;
-				while self.get_bin(self.particles[particle_index].pos).unwrap() == bin_done {
+				while self.get_bin(self.particles[particle_index].pos, globals).unwrap() == bin_done {
 					particle_index += 1;
 					if particle_index >= self.particles.len() {
 						do_break = true;
@@ -85,7 +86,7 @@ impl Bins {
 		}
 		// if everything's alright, insert
 		else {
-			let bin = self.get_bin(p.pos).unwrap();
+			let bin = self.get_bin(p.pos, globals).unwrap();
 
 			self.particles.insert(self.bins[bin], p);
 			for i in (bin+1)..self.bins.len() {
@@ -94,28 +95,11 @@ impl Bins {
 		}
 	}
 
-	pub fn get_colliding(&self, p: &DynamicParticle) -> Option<StaticParticle> {
-		let bin = self.get_bin(p.pos)?;
-		// let x = bin%BIN_COUNT;
-		// let y = bin/BIN_COUNT;
-		
-		// for r in -1..=1 {
-		// 	let start = (x as i32 - 1).clamp(0, BIN_COUNT as i32 - 1)+(y as i32 + r).clamp(0, BIN_COUNT as i32 - 1)*BIN_COUNT as i32;
-		// 	let end   = (x as i32 + 1).clamp(0, BIN_COUNT as i32 - 1)+(y as i32 + r).clamp(0, BIN_COUNT as i32 - 1)*BIN_COUNT as i32;
-		// 	// print!("bins.x: {}..{}  ", (x as i32 - 1).clamp(0, BIN_COUNT as i32 - 1), (x as i32 + 1).clamp(0, BIN_COUNT as i32 - 1));
-		// 	// print!("bins.y: {}  ", (y as i32 + r).clamp(0, BIN_COUNT as i32 - 1));
-		// 	// print!("bins.id: {}..{}  ", start, end);
-		// 	// println!("particles.id: {}..{}", self.bins[start as usize], self.bins[end as usize]);
-		// 	// println!("{:?}\n", self.bins);
-		// 	for other in &self.particles[self.bins[start as usize]..self.bins[end as usize]] {
-		// 		if p.pos.distance_squared(other.pos) <= PARTICLE_R * PARTICLE_R && other.pos != p.pos {
-		// 			return Some(*other);
-		// 		} 
-		// 	}
-		// }
+	pub fn get_colliding(&self, p: &DynamicParticle, globals: &Globals) -> Option<StaticParticle> {
+		let bin = self.get_bin(p.pos, globals)?;
 
 		for other in &self.particles[self.bins[bin]..self.bins[bin+1]] {
-			if p.collides(other) {
+			if p.collides(other, globals) {
 				return Some(*other);
 			}
 		}
@@ -123,12 +107,12 @@ impl Bins {
 			for y in -1..=1 {
 				if x == 0 && y == 0 { continue; }
 				
-				let edge_bin = self.get_bin(p.pos + vec2(x as f32 * PARTICLE_R, y as f32 * PARTICLE_R));
+				let edge_bin = self.get_bin(p.pos + vec2(x as f32 * globals.particle_r, y as f32 * globals.particle_r), globals);
 				if let Some(edge_bin) = edge_bin {
 					if edge_bin == bin { continue; }
 					
 					for other in &self.particles[self.bins[edge_bin]..self.bins[edge_bin+1]] {
-						if p.collides(other) {
+						if p.collides(other, globals) {
 							return Some(*other);
 						}
 					}

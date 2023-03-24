@@ -1,6 +1,7 @@
 use egui_macroquad::macroquad;
 use macroquad::prelude::*;
-use crate::{MUTATE_AMOUNT, PARTICLE_R};
+
+use crate::Globals;
 
 #[derive(Clone, Copy)]
 pub struct DynamicParticle {
@@ -9,13 +10,13 @@ pub struct DynamicParticle {
 }
 
 impl DynamicParticle {
-	pub fn collides(&self, other: &StaticParticle) -> bool {
-		(self.pos-other.pos).length_squared() <= 4.0*PARTICLE_R*PARTICLE_R
+	pub fn collides(&self, other: &StaticParticle, globals: &Globals) -> bool {
+		(self.pos-other.pos).length_squared() <= 4.0*globals.particle_r*globals.particle_r
 	}
 
 	// pos - position to normalize the distance to
-	pub fn to_static(&self, p: &StaticParticle) -> StaticParticle {
-		StaticParticle { pos: p.pos + (self.pos - p.pos).normalize_or_zero()*(2.0 * PARTICLE_R), color: mutate_col(&p.color, MUTATE_AMOUNT)}
+	pub fn to_static(&self, p: &StaticParticle, globals: &Globals) -> StaticParticle {
+		StaticParticle { pos: p.pos + (self.pos - p.pos).normalize_or_zero()*(2.0 * globals.particle_r), color: mutate_col(&p.color, globals.mutate_amount)}
 	}
 }
 
