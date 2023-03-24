@@ -5,17 +5,18 @@ mod bins;
 use std::{time::{SystemTime, UNIX_EPOCH}, ops::RangeInclusive};
 
 use dla::DLA;
-use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText}, macroquad};
+use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText, Layout, Align, Response}, macroquad};
 use macroquad::prelude::*;
 
-fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, speed: f64, label: T) where 
+fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, speed: f64, label: T) -> Response
+where 
 	N : egui::emath::Numeric,
 	T : Into<WidgetText>
-	 {
+{
 	ui.horizontal(|ui| {
 		ui.add(egui::DragValue::new(val).clamp_range(range).speed(speed));
 		ui.label(label);
-	});
+	}).response
 }
 
 pub struct Globals {
@@ -32,6 +33,7 @@ pub struct Globals {
 	pub bin_margin_min: f32,
 	pub bin_margin_max: f32,
 	pub iters_per_frame: u8,
+	pub is_playing: bool,
 }
 
 impl Default for Globals {
@@ -50,6 +52,7 @@ impl Default for Globals {
 			bin_margin_min: 0.05,
 			bin_margin_max: 0.50,
 			iters_per_frame: 1,
+			is_playing: true,
 		}
 	}
 }
@@ -76,11 +79,13 @@ async fn main() {
 		
 		let prof = profiler.clone();
 
-		for _ in 0..globals.iters_per_frame {
-			dla.kinematic_update(&globals);
-			dla.collide(&globals);
+		if globals.is_playing {
+			for _ in 0..globals.iters_per_frame {
+				dla.kinematic_update(&globals);
+				dla.collide(&globals);
+			}
+			dla.spawn(&globals);
 		}
-		dla.spawn(&globals);
 		profiler[0] = get_time() - start;
 		
 		clear_background(BLACK);
@@ -100,9 +105,6 @@ async fn main() {
 				.title_bar(false)
 				.show(ctx, |ui| {
 					ui.heading("Controls");
-					if ui.button("restart").clicked() {
-						dla = DLA::new(&globals);
-					}
 					ui.horizontal(|ui| {
 						ui.color_edit_button_hsva(&mut globals.seed_color);
 						ui.label("Seed color");
@@ -110,22 +112,42 @@ async fn main() {
 					drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
 					drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
 					drag_val_label(ui, &mut globals.iters_per_frame, 0..=100, 0.25, "Iterations per frame");
-					drag_val_label(ui, &mut globals.dynamic_target, 0..=500, 1.0, "Dynamic particles count");
-					drag_val_label(ui, &mut globals.zoom_smoothness, 0.5..=0.999, 0.001, "Zoom smoothness");
-					drag_val_label(ui, &mut globals.world_aggregate_ratio, 1.1..=3.0, 0.01, "World-aggregate ratio");
-					drag_val_label(ui, &mut globals.view_aggregate_ratio, 0.0..=3.0, 0.01, "Zoom-aggregate ratio");
+					drag_val_label(ui, &mut globals.dynamic_target, 0..=500, 1.0, "Particles count");
+
+					ui.collapsing("Advanced", |ui| {
+						drag_val_label(ui, &mut globals.zoom_smoothness, 0.5..=0.999, 0.001, "Zoom smoothness");
+						drag_val_label(ui, &mut globals.world_aggregate_ratio, 1.1..=3.0, 0.01, "World-aggregate ratio")
+							.on_hover_text_at_pointer("How many times bigger than the main structure should the simulated region be");
+
+						drag_val_label(ui, &mut globals.view_aggregate_ratio, 0.0..=3.0, 0.01, "Zoom-aggregate ratio")
+							.on_hover_text("How much space should be shown around the main structure");
+
+						drag_val_label(ui, &mut globals.particle_r, 0.001..=0.1, 0.001, "Particle radius");
+						drag_val_label(ui, &mut globals.grow_duration, 0.0..=1.0, 0.01, "Branch animation time");
+						
+						ui.collapsing("Expert", |ui| {
+							drag_val_label(ui, &mut globals.bin_margin_min, 0.0..=globals.bin_margin_max, 0.01, "Bin margin min")
+								.on_hover_text_at_pointer("If a particle gets locked this far from bins structure's edge or closer, resize the bins structure.");
+							drag_val_label(ui, &mut globals.bin_margin_max, globals.bin_margin_min..=2.0, 0.01, "Bin margin max")
+								.on_hover_text_at_pointer("When the bins structure is resized, this is the distance between the most far-reaching particle in a given direction and the edge of the bins structure.");
+						});
+					});
 					/*
-						world_aggregate_ratio: 1.6,
-						view_aggregate_ratio: 1.1,
-						particle_r: 0.01,
-						grow_duration: 0.3,
+						todo: split those into advanced/normal
 						bin_count: 31,
-						bin_margin_min: 0.05,
-						bin_margin_max: 0.50,
-					 */
-					if ui.button("defaults").clicked() {
-						globals = Globals::default();
-					}
+					*/
+					ui.horizontal(|ui| {
+						if ui.button("defaults").clicked() {
+							globals = Globals::default();
+						}
+						if ui.button(if globals.is_playing {"pause"} else {"play"}).clicked() {
+							globals.is_playing = !globals.is_playing;
+						}
+						if ui.button("restart").clicked() {
+							dla = DLA::new(&globals);
+						}
+					});
+
 
 					ui.separator();
 					ui.heading("Display");
