@@ -5,7 +5,7 @@ mod bins;
 use std::{time::{SystemTime, UNIX_EPOCH}, ops::RangeInclusive};
 
 use dla::DLA;
-use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText, Response}, macroquad};
+use egui_macroquad::{egui::{self, epaint::Hsva, Ui, WidgetText, Response, RichText}, macroquad};
 use macroquad::prelude::*;
 
 fn drag_val_label<N, T>(ui: &mut Ui, val: &mut N, range: RangeInclusive<N>, speed: f64, label: T) -> Response
@@ -32,7 +32,7 @@ pub struct Globals {
 	pub bin_count: usize,
 	pub bin_margin_min: f32,
 	pub bin_margin_max: f32,
-	pub iters_per_frame: u8,
+	pub iters_per_frame: u16,
 	pub is_playing: bool,
 }
 
@@ -64,6 +64,7 @@ async fn main() {
 	let mut globals = Globals::default();
 	let mut dla = DLA::new(&globals);
 
+	let mut draw_ui = true;
 	let mut draw_particles = false;
 	let mut draw_aggregate = false;
 	let mut draw_lines = true;
@@ -75,6 +76,7 @@ async fn main() {
 	let mut profiler = [0.0; 2];
 
     loop {
+
 		let start = get_time();
 		
 		let prof = profiler.clone();
@@ -97,71 +99,80 @@ async fn main() {
 		if draw_bins		{ dla.draw_bins(pixel*0.5, &globals); }
 		if draw_world		{ dla.draw_world(pixel); }
 
-		egui_macroquad::ui(|ctx| {
-			egui::Window::new("options")
-				.collapsible(false)
-				.fixed_pos((10.0, 10.0))
-				.fixed_size((150.0, 400.0))
-				.title_bar(false)
-				.show(ctx, |ui| {
-					ui.heading("Controls");
-					ui.horizontal(|ui| {
-						ui.color_edit_button_hsva(&mut globals.seed_color);
-						ui.label("Seed color");
-					}).response.on_hover_text_at_pointer("Needs restart");
-					drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
-					drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
-					drag_val_label(ui, &mut globals.iters_per_frame, 0..=100, 0.25, "Iterations per frame");
-					drag_val_label(ui, &mut globals.dynamic_target, 0..=500, 1.0, "Particles count");
+		if draw_ui {
+			egui_macroquad::ui(|ctx| {
+				egui::Window::new("options")
+					.collapsible(false)
+					.fixed_pos((10.0, 10.0))
+					.fixed_size((150.0, 400.0))
+					.title_bar(false)
+					.show(ctx, |ui| {
+						ui.heading("Controls");
+						ui.horizontal(|ui| {
+							ui.color_edit_button_hsva(&mut globals.seed_color);
+							ui.label("Seed color");
+						}).response.on_hover_text_at_pointer("Needs restart");
+						drag_val_label(ui, &mut globals.mutate_amount, 0.0..=1.0, 0.001, "Color variation");
+						drag_val_label(ui, &mut globals.branch_thickness, 0.0..=10.0, 0.01, "Branch thickness");
+						drag_val_label(ui, &mut globals.iters_per_frame, 0..=300, 0.25, "Iterations per frame");
+						drag_val_label(ui, &mut globals.dynamic_target, 0..=1000, 1.0, "Particles count");
 
-					ui.collapsing("Advanced", |ui| {
-						drag_val_label(ui, &mut globals.zoom_smoothness, 0.5..=0.999, 0.001, "Zoom smoothness");
-						drag_val_label(ui, &mut globals.world_aggregate_ratio, 1.1..=3.0, 0.01, "World-aggregate ratio")
-							.on_hover_text_at_pointer("How many times bigger than the main structure should the simulated region be");
+						ui.collapsing("Advanced", |ui| {
+							drag_val_label(ui, &mut globals.zoom_smoothness, 0.5..=0.999, 0.001, "Zoom smoothness");
+							drag_val_label(ui, &mut globals.world_aggregate_ratio, 1.1..=3.0, 0.01, "World-aggregate ratio")
+								.on_hover_text_at_pointer("How many times bigger than the main structure should the simulated region be");
 
-						drag_val_label(ui, &mut globals.view_aggregate_ratio, 0.0..=3.0, 0.01, "Zoom-aggregate ratio")
-							.on_hover_text("How much space should be shown around the main structure");
+							drag_val_label(ui, &mut globals.view_aggregate_ratio, 0.0..=3.0, 0.01, "Zoom-aggregate ratio")
+								.on_hover_text("How much space should be shown around the main structure");
 
-						drag_val_label(ui, &mut globals.particle_r, 0.001..=0.1, 0.001, "Particle radius");
-						drag_val_label(ui, &mut globals.grow_duration, 0.0..=1.0, 0.01, "Branch animation time");
-						
-						ui.collapsing("Expert", |ui| {
-							drag_val_label(ui, &mut globals.bin_margin_min, 0.0..=globals.bin_margin_max, 0.01, "Bin margin min")
-								.on_hover_text_at_pointer("If a particle gets locked this far from bins structure's edge or closer, resize the bins structure.");
-							drag_val_label(ui, &mut globals.bin_margin_max, globals.bin_margin_min..=2.0, 0.01, "Bin margin max")
-								.on_hover_text_at_pointer("When the bins structure is resized, this is the distance between the most far-reaching particle in a given direction and the edge of the bins structure.");
+							drag_val_label(ui, &mut globals.particle_r, 0.001..=0.1, 0.001, "Particle radius");
+							drag_val_label(ui, &mut globals.grow_duration, 0.0..=1.0, 0.01, "Branch animation time");
+							
+							ui.collapsing("Expert", |ui| {
+								drag_val_label(ui, &mut globals.bin_margin_min, 0.0..=globals.bin_margin_max, 0.01, "Bin margin min")
+									.on_hover_text_at_pointer("If a particle gets locked this far from bins structure's edge or closer, resize the bins structure.");
+								drag_val_label(ui, &mut globals.bin_margin_max, globals.bin_margin_min..=2.0, 0.01, "Bin margin max")
+									.on_hover_text_at_pointer("When the bins structure is resized, this is the distance between the most far-reaching particle in a given direction and the edge of the bins structure.");
+							});
 						});
+						ui.horizontal(|ui| {
+							if ui.button("defaults").clicked() {
+								globals = Globals::default();
+							}
+							if ui.button(if globals.is_playing {"pause"} else {"play"}).clicked() {
+								globals.is_playing = !globals.is_playing;
+							}
+							if ui.button("restart").clicked() {
+								dla = DLA::new(&globals);
+							}
+						});
+
+
+						ui.separator();
+						ui.heading("Display");
+						ui.checkbox(&mut draw_particles, "particles");
+						ui.checkbox(&mut draw_aggregate, "aggregate");
+						ui.checkbox(&mut draw_lines, "branches");
+						ui.checkbox(&mut draw_bins, "bins");
+						ui.checkbox(&mut draw_world, "world");
+
+						ui.separator();
+						ui.heading("Info");
+						ui.label(format!("{}fps", get_fps()));
+						ui.label(format!("frame time: {:.2}ms", 1000.0*prof[1]));
+						ui.label(format!("update time: {:.2}ms", 1000.0*prof[0]));
+						ui.label(format!("draw time: {:.2}ms", 1000.0*prof[1] - 1000.0*prof[0]));
+
+						ui.add_space(20.0);
+						ui.label(WidgetText::RichText(RichText::new("(Show/hide UI by hitting space)").size(9.0)));
 					});
-					ui.horizontal(|ui| {
-						if ui.button("defaults").clicked() {
-							globals = Globals::default();
-						}
-						if ui.button(if globals.is_playing {"pause"} else {"play"}).clicked() {
-							globals.is_playing = !globals.is_playing;
-						}
-						if ui.button("restart").clicked() {
-							dla = DLA::new(&globals);
-						}
-					});
+			});
+			egui_macroquad::draw();
+		}
 
-
-					ui.separator();
-					ui.heading("Display");
-					ui.checkbox(&mut draw_particles, "particles");
-					ui.checkbox(&mut draw_aggregate, "aggregate");
-					ui.checkbox(&mut draw_lines, "branches");
-					ui.checkbox(&mut draw_bins, "bins");
-					ui.checkbox(&mut draw_world, "world");
-
-					ui.separator();
-					ui.heading("Info");
-					ui.label(format!("{}fps", get_fps()));
-					ui.label(format!("frame time: {:.2}ms", 1000.0*prof[1]));
-					ui.label(format!("update time: {:.2}ms", 1000.0*prof[0]));
-					ui.label(format!("draw time: {:.2}ms", 1000.0*prof[1] - 1000.0*prof[0]));
-				});
-		});
-		egui_macroquad::draw();
+		if is_key_pressed(KeyCode::Space) {
+			draw_ui = !draw_ui;
+		}
 
 		profiler[1] = get_time() - start;
 
